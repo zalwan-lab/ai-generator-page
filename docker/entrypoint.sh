@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
+
+echo "Starting entrypoint..."
 
 cd /var/www/html
 
@@ -31,16 +33,17 @@ if [ "${DB_CONNECTION:-mysql}" = "mysql" ]; then
     done
 fi
 
-php artisan config:clear || true
-php artisan migrate --force || true
+php artisan config:clear || echo "Warning: config:clear failed"
+php artisan migrate --force || echo "Warning: migrate failed"
 
 # Cache for production performance (skip on local debug).
 if [ "${APP_ENV:-local}" = "production" ]; then
-    php artisan config:cache
-    php artisan route:cache
-    php artisan view:cache
+    php artisan config:cache || echo "Warning: config:cache failed"
+    php artisan route:cache || echo "Warning: route:cache failed"
+    php artisan view:cache || echo "Warning: view:cache failed"
 fi
 
-chown -R www-data:www-data storage bootstrap/cache vendor || true
+chown -R www-data:www-data storage bootstrap/cache vendor || echo "Warning: chown failed"
 
+echo "Starting supervisord..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

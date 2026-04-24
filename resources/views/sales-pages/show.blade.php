@@ -2,7 +2,11 @@
 @section('title', $page->product_name)
 
 @section('content')
-@php $g = $page->generated_content; @endphp
+@php
+    $g = $page->generated_content;
+    $p = \App\Support\Theme::palette($g['theme']['palette'] ?? null);
+    $mood = \App\Support\Theme::mood($g['theme']['mood'] ?? null);
+@endphp
 
 <div x-data="{ copied:'', copy(key,val){ navigator.clipboard.writeText(val); this.copied = key; setTimeout(()=>this.copied='', 1500) } }">
 
@@ -14,7 +18,13 @@
                 <span class="text-slate-700">{{ $page->product_name }}</span>
             </nav>
             <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ $page->product_name }}</h1>
-            <p class="mt-1 text-xs text-slate-500">Dibuat {{ $page->created_at->diffForHumans() }} · {{ $page->created_at->format('d M Y H:i') }}</p>
+            <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span>Dibuat {{ $page->created_at->diffForHumans() }}</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full {{ 'bg-'.$p.'-50' }} px-2.5 py-0.5 {{ 'text-'.$p.'-700' }}">
+                    <span class="h-2 w-2 rounded-full {{ 'bg-'.$p.'-600' }}"></span>
+                    {{ $p }} · {{ $mood }}
+                </span>
+            </div>
         </div>
         <div class="flex flex-wrap gap-2">
             <button @click="copy('all', @js(json_encode($g, JSON_UNESCAPED_UNICODE)))"
@@ -39,7 +49,7 @@
         <div class="space-y-6 lg:col-span-2">
             {{-- HERO BLOCK --}}
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
-                <div class="relative bg-gradient-to-br from-brand-600 via-brand-800 to-fuchsia-800 p-8 text-white">
+                <div class="relative bg-gradient-to-br from-{{ $p }}-600 via-{{ $p }}-800 to-{{ $p }}-900 p-8 text-white">
                     <div class="absolute inset-0 bg-grid opacity-10"></div>
                     <div class="relative">
                         <div class="flex items-center justify-between gap-4">
@@ -56,14 +66,14 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
                     <div>
                         <p class="text-xs uppercase tracking-wide text-slate-500">Harga</p>
-                        <p class="text-xl font-bold text-brand-700">{{ $g['price'] ?? '' }}</p>
+                        <p class="text-xl font-bold {{ 'text-'.$p.'-700' }}">{{ $g['price'] ?? '' }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button @click="copy('cta', @js($g['call_to_action'] ?? ''))"
                             class="rounded-full bg-white p-1.5 text-slate-500 hover:text-slate-900" title="Copy CTA">
                             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                         </button>
-                        <span class="inline-flex rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 px-5 py-2.5 font-medium text-white shadow-soft">{{ $g['call_to_action'] ?? '' }}</span>
+                        <span class="inline-flex rounded-lg bg-gradient-to-br from-{{ $p }}-600 to-{{ $p }}-800 px-5 py-2.5 font-medium text-white shadow-soft">{{ $g['call_to_action'] ?? '' }}</span>
                     </div>
                 </div>
             </section>
@@ -98,7 +108,7 @@
                     <ul class="divide-y divide-slate-100">
                         @foreach($g['features'] as $f)
                             <li class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                                <span class="mt-0.5 grid h-6 w-6 shrink-0 place-content-center rounded-md bg-brand-50 text-brand-600">
+                                <span class="mt-0.5 grid h-6 w-6 shrink-0 place-content-center rounded-md {{ 'bg-'.$p.'-50' }} {{ 'text-'.$p.'-600' }}">
                                     <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                                 </span>
                                 <span class="text-sm text-slate-700">{{ $f }}</span>
@@ -110,8 +120,8 @@
 
             {{-- SOCIAL PROOF --}}
             @if(!empty($g['social_proof']))
-                <section class="rounded-2xl border-l-4 border-brand-500 bg-brand-50/40 p-6">
-                    <svg class="h-5 w-5 text-brand-600" viewBox="0 0 24 24" fill="currentColor"><path d="M7 11l-3 9h5l3-9H7zm9 0l-3 9h5l3-9h-5z" opacity=".8"/></svg>
+                <section class="rounded-2xl border-l-4 {{ 'border-'.$p.'-500' }} {{ 'bg-'.$p.'-50' }}/40 p-6">
+                    <svg class="h-5 w-5 {{ 'text-'.$p.'-600' }}" viewBox="0 0 24 24" fill="currentColor"><path d="M7 11l-3 9h5l3-9H7zm9 0l-3 9h5l3-9h-5z" opacity=".8"/></svg>
                     <p class="mt-3 text-lg italic leading-relaxed text-slate-700">{{ $g['social_proof'] }}</p>
                 </section>
             @endif

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Theme;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -230,33 +231,31 @@ SYS;
 
     private function buildPrompt(array $input, string $contextSummary): array
     {
-        $system = <<<'SYS'
-You are a senior conversion copywriter.
+        $paletteHints = collect(Theme::PALETTE_HINTS)->map(fn ($v, $k) => "  - {$k}: {$v}")->implode("\n");
+        $moodHints = collect(Theme::MOOD_HINTS)->map(fn ($v, $k) => "  - {$k}: {$v}")->implode("\n");
 
-Your task is to generate a high-converting sales page.
+        $system = <<<SYS
+You are a senior conversion copywriter AND brand designer.
 
-Use the provided CONTEXT to maintain consistency in tone, style, and messaging.
+Your task is to generate a high-converting sales page AND pick a visual theme
+(color palette + mood) that fits the product's character.
+
+Use the provided CONTEXT to stay consistent with the user's existing work.
 
 Return ONLY valid JSON. No prose, no markdown fences.
 
-Structure:
-{
-  "headline": string,
-  "subheadline": string,
-  "description": string,
-  "benefits": string[],
-  "features": string[],
-  "social_proof": string,
-  "price": string,
-  "call_to_action": string
-}
-
 Rules:
-- Follow AIDA principles (Attention, Interest, Desire, Action).
-- Maintain consistency with previous outputs (tone, audience framing, positioning).
-- Avoid repetition: do not reuse previous headlines or CTAs verbatim.
-- Keep it natural and persuasive.
-- Language: Bahasa Indonesia.
+- Follow AIDA (Attention, Interest, Desire, Action).
+- Keep copy natural, persuasive, and in Bahasa Indonesia.
+- Do not reuse previous headlines or CTAs verbatim (see avoid list in CONTEXT).
+- Pick theme.palette (the landing page color) from this list and choose the one
+  that best matches the product and audience:
+{$paletteHints}
+- Pick theme.mood from:
+{$moodHints}
+- Be deliberate. A yoga retreat is NOT violet/bold; it's probably emerald or
+  teal with a minimal or elegant mood. A kids' game is NOT slate/elegant; it's
+  sky or fuchsia with playful. Let the product dictate the look.
 SYS;
 
         $user = sprintf(
@@ -343,7 +342,7 @@ SYS;
                 'schema' => [
                     'type' => 'object',
                     'additionalProperties' => false,
-                    'required' => ['headline', 'subheadline', 'description', 'benefits', 'features', 'social_proof', 'price', 'call_to_action'],
+                    'required' => ['headline', 'subheadline', 'description', 'benefits', 'features', 'social_proof', 'price', 'call_to_action', 'theme'],
                     'properties' => [
                         'headline' => ['type' => 'string'],
                         'subheadline' => ['type' => 'string'],
@@ -353,6 +352,15 @@ SYS;
                         'social_proof' => ['type' => 'string'],
                         'price' => ['type' => 'string'],
                         'call_to_action' => ['type' => 'string'],
+                        'theme' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['palette', 'mood'],
+                            'properties' => [
+                                'palette' => ['type' => 'string', 'enum' => Theme::PALETTES],
+                                'mood' => ['type' => 'string', 'enum' => Theme::MOODS],
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -378,6 +386,8 @@ SYS;
      */
     private function validateShape(array $content): array
     {
+        $theme = (array) ($content['theme'] ?? []);
+
         return [
             'headline' => (string) ($content['headline'] ?? ''),
             'subheadline' => (string) ($content['subheadline'] ?? ''),
@@ -387,6 +397,10 @@ SYS;
             'social_proof' => (string) ($content['social_proof'] ?? ''),
             'price' => (string) ($content['price'] ?? ''),
             'call_to_action' => (string) ($content['call_to_action'] ?? ''),
+            'theme' => [
+                'palette' => Theme::palette($theme['palette'] ?? null),
+                'mood' => Theme::mood($theme['mood'] ?? null),
+            ],
         ];
     }
 }

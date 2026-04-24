@@ -264,6 +264,9 @@
         </div>
     </footer>
 
+    {{-- Tailwind JIT safelist: all palette × shade combinations used by theme system --}}
+    <div class="hidden {{ \App\Support\Theme::safelist() }}" aria-hidden="true"></div>
+
     <style>[x-cloak]{display:none!important}</style>
 </body>
 </html>

@@ -58,7 +58,124 @@
 
             <nav class="hidden items-center gap-1 sm:flex">
                 @auth
-                    @php $r = request()->route()?->getName(); @endphp
+                    @php
+                        $r = request()->route()?->getName();
+                        $currentWs = auth()->user()->currentWorkspace();
+                        $wsList = auth()->user()->workspaces;
+                        $cwsColors = $currentWs->colorClasses();
+                    @endphp
+
+                    {{-- Workspace switcher --}}
+                    <div class="relative mr-2" x-data="{ open:false, createOpen:false }" @click.outside="open=false">
+                        <button type="button" @click="open=!open"
+                            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 hover:bg-slate-50">
+                            <span class="grid h-6 w-6 place-content-center rounded-md {{ $cwsColors['bg'] }} text-xs font-semibold text-white">{{ $currentWs->initial() }}</span>
+                            <span class="max-w-[120px] truncate text-sm font-medium text-slate-800">{{ $currentWs->name }}</span>
+                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div x-show="open" x-transition.opacity.duration.150ms x-cloak
+                             class="absolute left-0 mt-1 w-72 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                            <div class="px-2.5 py-1.5">
+                                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Workspaces</p>
+                                <p class="mt-0.5 text-xs text-slate-500">Setiap workspace punya konteks sendiri.</p>
+                            </div>
+                            <div class="max-h-64 overflow-auto">
+                                @foreach($wsList as $ws)
+                                    @php $wc = $ws->colorClasses(); $isActive = $ws->id === $currentWs->id; @endphp
+                                    <form method="POST" action="{{ route('workspaces.switch', $ws) }}" class="block">
+                                        @csrf
+                                        <button type="submit"
+                                            class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm {{ $isActive ? $wc['bg50'].' '.$wc['text'] : 'text-slate-700 hover:bg-slate-50' }}">
+                                            <span class="grid h-7 w-7 shrink-0 place-content-center rounded-md {{ $wc['bg'] }} text-xs font-semibold text-white">{{ $ws->initial() }}</span>
+                                            <span class="min-w-0 flex-1 truncate">{{ $ws->name }}</span>
+                                            @if($isActive)
+                                                <svg class="h-4 w-4 {{ $wc['text'] }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                                            @endif
+                                        </button>
+                                    </form>
+                                @endforeach
+                            </div>
+                            <div class="mt-1 border-t border-slate-100 pt-1">
+                                <a href="{{ route('workspaces.create') }}"
+                                    class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-brand-700 hover:bg-brand-50">
+                                    <span class="grid h-7 w-7 shrink-0 place-content-center rounded-md bg-brand-100">
+                                        <svg class="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                                    </span>
+                                    Buat Workspace Baru
+                                </a>
+                            </div>
+                        </div>
+
+                        {{-- Create workspace modal --}}
+                        <div x-show="createOpen" x-cloak
+                             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+                             x-transition.opacity.duration.200ms
+                             @click.self="createOpen=false"
+                             @keydown.escape.window="createOpen=false">
+                            <form method="POST" action="{{ route('workspaces.store') }}"
+                                  x-data="{ color:'brand', emoji:'', name:'' }"
+                                  class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                                @csrf
+                                <div class="mb-4 flex items-center justify-between">
+                                    <h2 class="text-lg font-semibold">Workspace Baru</h2>
+                                    <button type="button" @click="createOpen=false" class="text-slate-400 hover:text-slate-600">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+                                <p class="mb-4 text-sm text-slate-500">Workspace punya konteks & riwayat halaman sendiri. Ideal untuk memisahkan brand / proyek yang berbeda.</p>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">Nama</label>
+                                        <div class="mt-1 flex gap-2">
+                                            <input type="text" name="emoji" x-model="emoji" maxlength="4" placeholder="🚀"
+                                                class="w-14 rounded-lg border-slate-300 text-center shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                            <input type="text" name="name" x-model="name" required maxlength="100" placeholder="Contoh: YogaStudio, MarketBoost, Client X"
+                                                class="flex-1 rounded-lg border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">Warna</label>
+                                        <input type="hidden" name="color" x-model="color">
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach(\App\Models\Workspace::COLORS as $c)
+                                                @php
+                                                    $map = [
+                                                        'brand'=>'bg-brand-500','emerald'=>'bg-emerald-500','rose'=>'bg-rose-500',
+                                                        'amber'=>'bg-amber-500','sky'=>'bg-sky-500','fuchsia'=>'bg-fuchsia-500',
+                                                    ];
+                                                    $ring = [
+                                                        'brand'=>'ring-brand-500','emerald'=>'ring-emerald-500','rose'=>'ring-rose-500',
+                                                        'amber'=>'ring-amber-500','sky'=>'ring-sky-500','fuchsia'=>'ring-fuchsia-500',
+                                                    ];
+                                                @endphp
+                                                <button type="button" @click="color = @js($c)"
+                                                    :class="color === @js($c) ? 'ring-2 ring-offset-2 {{ $ring[$c] }}' : 'ring-1 ring-slate-200'"
+                                                    class="h-8 w-8 rounded-lg {{ $map[$c] }}" title="{{ $c }}"></button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">Deskripsi <span class="text-xs text-slate-400">(opsional)</span></label>
+                                        <textarea name="description" rows="2" maxlength="500" placeholder="Untuk brand / proyek apa workspace ini?"
+                                            class="mt-1 w-full rounded-lg border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"></textarea>
+                                    </div>
+
+                                    <div class="flex items-center justify-end gap-2 pt-2">
+                                        <button type="button" @click="createOpen=false"
+                                            class="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Batal</button>
+                                        <button type="submit"
+                                            class="rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-2 text-sm font-medium text-white hover:from-brand-700 hover:to-brand-900">
+                                            Buat & Aktifkan
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <a href="{{ route('dashboard') }}" class="rounded-lg px-3 py-2 text-sm {{ $r==='dashboard' ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100' }}">Dashboard</a>
                     <a href="{{ route('sales-pages.index') }}" class="rounded-lg px-3 py-2 text-sm {{ str_starts_with((string)$r,'sales-pages.') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100' }}">Riwayat</a>
                     <a href="{{ route('sales-pages.create') }}" class="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-brand-600 to-brand-700 px-3.5 py-2 text-sm font-medium text-white shadow-soft hover:from-brand-700 hover:to-brand-800">

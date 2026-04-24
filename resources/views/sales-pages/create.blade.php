@@ -2,10 +2,15 @@
 @section('title', 'Buat Halaman Penjualan')
 
 @section('content')
+@php $wc = $workspace->colorClasses(); @endphp
 <div class="mb-6 flex items-center justify-between">
     <div>
         <nav class="text-xs text-slate-500"><a href="{{ route('sales-pages.index') }}" class="hover:underline">Riwayat</a> <span class="mx-1">/</span> <span class="text-slate-700">Baru</span></nav>
         <h1 class="mt-1 text-2xl font-bold tracking-tight">Buat Halaman Penjualan</h1>
+        <div class="mt-2 inline-flex items-center gap-2 rounded-full border {{ $wc['border'] }} {{ $wc['bg50'] }} px-2.5 py-1 text-xs">
+            <span class="grid h-4 w-4 place-content-center rounded-sm {{ $wc['bg'] }} text-[10px] font-semibold text-white">{{ $workspace->initial() }}</span>
+            <span class="{{ $wc['text'] }} font-medium">{{ $workspace->name }}</span>
+        </div>
     </div>
     <div class="hidden items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 sm:flex">
         <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>

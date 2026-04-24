@@ -2,10 +2,17 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@php $wc = $workspace->colorClasses(); @endphp
+
 <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
     <div>
         <p class="text-sm text-slate-500">{{ now()->translatedFormat('l, d F Y') }}</p>
         <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Halo, {{ auth()->user()->name }}</h1>
+        <div class="mt-2 inline-flex items-center gap-2 rounded-full border {{ $wc['border'] }} {{ $wc['bg50'] }} px-2.5 py-1 text-xs">
+            <span class="grid h-4 w-4 place-content-center rounded-sm {{ $wc['bg'] }} text-[10px] font-semibold text-white">{{ $workspace->initial() }}</span>
+            <span class="{{ $wc['text'] }} font-medium">Workspace: {{ $workspace->name }}</span>
+            <span class="text-slate-400">· konteks terisolasi</span>
+        </div>
     </div>
     <a href="{{ route('sales-pages.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-2.5 text-sm font-medium text-white shadow-soft hover:from-brand-700 hover:to-brand-900">
         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>

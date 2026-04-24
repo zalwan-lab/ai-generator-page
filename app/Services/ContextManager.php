@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SalesPage;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -28,12 +29,15 @@ class ContextManager
     /**
      * Build a context bundle ready for prompt injection.
      *
+     * Scoped to a single workspace — this is the key mechanism that keeps
+     * different brands / projects from polluting each other's context.
+     *
      * @return array{summary: string, patterns: array<string,mixed>, avoid: array<string,array<int,string>>, used: int}
      */
-    public function buildForUser(User $user, int $limit = self::DEFAULT_RECENT): array
+    public function buildForWorkspace(Workspace $workspace, int $limit = self::DEFAULT_RECENT): array
     {
         $recent = SalesPage::query()
-            ->where('user_id', $user->id)
+            ->where('workspace_id', $workspace->id)
             ->latest('id')
             ->limit($limit)
             ->get();
@@ -57,6 +61,16 @@ class ContextManager
             'avoid' => $avoid,
             'used' => $recent->count(),
         ];
+    }
+
+    /**
+     * Convenience: resolve the user's current workspace and build from there.
+     *
+     * @return array{summary: string, patterns: array<string,mixed>, avoid: array<string,array<int,string>>, used: int}
+     */
+    public function buildForUser(User $user, int $limit = self::DEFAULT_RECENT): array
+    {
+        return $this->buildForWorkspace($user->currentWorkspace(), $limit);
     }
 
     /**

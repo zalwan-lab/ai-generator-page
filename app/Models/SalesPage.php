@@ -12,6 +12,7 @@ class SalesPage extends Model
 
     protected $fillable = [
         'user_id',
+        'workspace_id',
         'product_name',
         'input_data',
         'generated_content',
@@ -29,5 +30,10 @@ class SalesPage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
     }
 }

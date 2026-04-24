@@ -15,21 +15,24 @@ class SalesPageController extends Controller
 {
     public function index(Request $request)
     {
-        $pages = $request->user()->salesPages()->paginate(12);
+        $workspace = $request->user()->currentWorkspace();
+        $pages = $workspace->salesPages()->paginate(12);
 
-        return view('sales-pages.index', ['pages' => $pages]);
+        return view('sales-pages.index', ['pages' => $pages, 'workspace' => $workspace]);
     }
 
     public function create(Request $request, ContextManager $context)
     {
-        $bundle = $context->buildForUser($request->user());
+        $workspace = $request->user()->currentWorkspace();
+        $bundle = $context->buildForWorkspace($workspace);
 
-        return view('sales-pages.create', ['context' => $bundle]);
+        return view('sales-pages.create', ['context' => $bundle, 'workspace' => $workspace]);
     }
 
     public function store(StoreSalesPageRequest $request, SalesPageGenerator $generator)
     {
         $input = $request->normalized();
+        $workspace = $request->user()->currentWorkspace();
 
         try {
             $result = $generator->generate($input, $request->user());
@@ -43,6 +46,7 @@ class SalesPageController extends Controller
 
         $page = SalesPage::create([
             'user_id' => $request->user()->id,
+            'workspace_id' => $workspace->id,
             'product_name' => $input['product_name'],
             'input_data' => $input,
             'generated_content' => $result['content'],
@@ -51,7 +55,7 @@ class SalesPageController extends Controller
 
         return redirect()
             ->route('sales-pages.show', $page)
-            ->with('status', 'Halaman berhasil dibuat dengan konteks dari riwayat Anda.');
+            ->with('status', "Halaman dibuat di workspace \"{$workspace->name}\".");
     }
 
     public function suggest(Request $request, SalesPageGenerator $generator): JsonResponse

@@ -2,10 +2,15 @@
 @section('title', 'Riwayat Halaman')
 
 @section('content')
+@php $wc = $workspace->colorClasses(); @endphp
 <div class="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
     <div>
-        <h1 class="text-2xl font-bold tracking-tight">Riwayat Halaman</h1>
-        <p class="mt-1 text-sm text-slate-500">{{ $pages->total() }} halaman total · konteks dibangun dari 5 terakhir.</p>
+        <div class="inline-flex items-center gap-2 rounded-full border {{ $wc['border'] }} {{ $wc['bg50'] }} px-2.5 py-1 text-xs">
+            <span class="grid h-4 w-4 place-content-center rounded-sm {{ $wc['bg'] }} text-[10px] font-semibold text-white">{{ $workspace->initial() }}</span>
+            <span class="{{ $wc['text'] }} font-medium">{{ $workspace->name }}</span>
+        </div>
+        <h1 class="mt-2 text-2xl font-bold tracking-tight">Riwayat Halaman</h1>
+        <p class="mt-1 text-sm text-slate-500">{{ $pages->total() }} halaman di workspace ini · konteks dibangun dari 5 terakhir.</p>
     </div>
     <a href="{{ route('sales-pages.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-2.5 text-sm font-medium text-white shadow-soft hover:from-brand-700 hover:to-brand-900">
         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>

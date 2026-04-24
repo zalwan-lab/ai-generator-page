@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SalesPageController;
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +22,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('/workspaces/create', [WorkspaceController::class, 'create'])->name('workspaces.create');
+    Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::post('/workspaces/{workspace}/switch', [WorkspaceController::class, 'switch'])->name('workspaces.switch');
+    Route::patch('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
+    Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
     Route::get('/sales-pages', [SalesPageController::class, 'index'])->name('sales-pages.index');
     Route::get('/sales-pages/create', [SalesPageController::class, 'create'])->name('sales-pages.create');

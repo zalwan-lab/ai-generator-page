@@ -43,4 +43,4 @@ fi
 
 chown -R www-data:www-data storage bootstrap/cache vendor || true
 
-exec "$@"
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

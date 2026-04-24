@@ -32,5 +32,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
     && rm -f /etc/nginx/sites-enabled/default
 
 EXPOSE 8080
+ENTRYPOINT []
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1.6
 FROM php:8.3-fpm-bookworm AS base
 
-# System deps + PHP extensions Laravel needs.
+# System deps + PHP extensions Laravel needs + nginx + supervisord.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         bash git curl unzip default-mysql-client \
         libicu-dev libonig-dev libzip-dev libpng-dev libjpeg-dev libfreetype-dev \
+        nginx supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl zip bcmath gd opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -24,9 +25,12 @@ RUN composer dump-autoload --optimize --no-dev \
     && chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && rm -f /etc/nginx/sites-enabled/default
 
-EXPOSE 9000
+EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["php-fpm", "-F"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

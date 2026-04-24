@@ -40,6 +40,9 @@ return [
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
         'timeout' => env('OPENAI_TIMEOUT', 60),
+        // Use the stricter json_schema response_format (OpenAI ≥ 2024-08-06, Groq, etc.)
+        // Set to false for older models / proxies that only support json_object.
+        'schema_mode' => env('OPENAI_SCHEMA_MODE', true),
     ],
 
 ];

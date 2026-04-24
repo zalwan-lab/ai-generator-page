@@ -93,15 +93,30 @@ SYS;
             throw new RuntimeException('LLM not configured. Set OPENAI_API_KEY and OPENAI_BASE_URL in .env');
         }
 
+        $payload = [
+            'model' => $model,
+            'messages' => $messages,
+            'temperature' => 0.7,
+            'response_format' => $this->responseFormat(),
+        ];
+
         $response = Http::withToken($key)
             ->timeout((int) config('services.openai.timeout', 60))
             ->acceptJson()
-            ->post($base.'/chat/completions', [
-                'model' => $model,
-                'messages' => $messages,
-                'temperature' => 0.7,
-                'response_format' => ['type' => 'json_object'],
-            ]);
+            ->post($base.'/chat/completions', $payload);
+
+        // If the endpoint doesn't support json_schema (older models / some proxies),
+        // automatically retry with the broader json_object mode.
+        if ($response->status() === 400 && config('services.openai.schema_mode', true)) {
+            $body = (string) $response->body();
+            if (str_contains(strtolower($body), 'json_schema') || str_contains(strtolower($body), 'response_format')) {
+                $payload['response_format'] = ['type' => 'json_object'];
+                $response = Http::withToken($key)
+                    ->timeout((int) config('services.openai.timeout', 60))
+                    ->acceptJson()
+                    ->post($base.'/chat/completions', $payload);
+            }
+        }
 
         if ($response->failed()) {
             Log::error('LLM call failed', ['status' => $response->status(), 'body' => $response->body()]);
@@ -114,6 +129,40 @@ SYS;
         }
 
         return $content;
+    }
+
+    /**
+     * Prefer the stricter json_schema mode (gpt-4o-2024-08-06+, Groq, most modern endpoints).
+     * Falls back to json_object if OPENAI_SCHEMA_MODE is disabled or the endpoint rejects it.
+     */
+    private function responseFormat(): array
+    {
+        if (! config('services.openai.schema_mode', true)) {
+            return ['type' => 'json_object'];
+        }
+
+        return [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'sales_page',
+                'strict' => true,
+                'schema' => [
+                    'type' => 'object',
+                    'additionalProperties' => false,
+                    'required' => ['headline', 'subheadline', 'description', 'benefits', 'features', 'social_proof', 'price', 'call_to_action'],
+                    'properties' => [
+                        'headline' => ['type' => 'string'],
+                        'subheadline' => ['type' => 'string'],
+                        'description' => ['type' => 'string'],
+                        'benefits' => ['type' => 'array', 'items' => ['type' => 'string'], 'minItems' => 3, 'maxItems' => 8],
+                        'features' => ['type' => 'array', 'items' => ['type' => 'string'], 'minItems' => 3, 'maxItems' => 8],
+                        'social_proof' => ['type' => 'string'],
+                        'price' => ['type' => 'string'],
+                        'call_to_action' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+        ];
     }
 
     private function parseJson(string $raw): array

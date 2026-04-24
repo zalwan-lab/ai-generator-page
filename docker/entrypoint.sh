@@ -1,49 +1,65 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 echo "Starting entrypoint..."
 
 cd /var/www/html
 
-# When the source dir is bind-mounted from the host, the image's vendor/ is
-# shadowed. Install composer deps on first boot if missing.
+PORT=${PORT:-8080}
+echo "PORT=$PORT"
+
+# Replace nginx port placeholder
+if grep -q "__PORT__" /etc/nginx/conf.d/default.conf; then
+    echo "Injecting PORT into nginx config..."
+    sed "s/__PORT__/${PORT}/g" \
+        /etc/nginx/conf.d/default.conf \
+        > /etc/nginx/conf.d/default.tmp
+
+    mv /etc/nginx/conf.d/default.tmp \
+       /etc/nginx/conf.d/default.conf
+fi
+
+echo "Final nginx config:"
+cat /etc/nginx/conf.d/default.conf
+
+# Install vendor if missing
 if [ ! -f vendor/autoload.php ]; then
-    echo "› vendor/ missing — running composer install…"
+    echo "vendor missing — running composer install..."
     composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 fi
 
-# First-boot bootstrapping: copy .env, generate key, wait for MySQL, run migrations.
+# Setup .env
 if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Generate APP_KEY if missing
 if ! grep -q "^APP_KEY=base64:" .env; then
     php artisan key:generate --force
 fi
 
-# Wait for MySQL to be reachable before migrating.
+# Wait for MySQL
 if [ "${DB_CONNECTION:-mysql}" = "mysql" ]; then
-    echo "› Waiting for MySQL at ${DB_HOST:-mysql}:${DB_PORT:-3306}…"
+    echo "Waiting for MySQL at ${DB_HOST:-mysql}:${DB_PORT:-3306}..."
     for i in $(seq 1 60); do
         if php -r "exit(@fsockopen(getenv('DB_HOST') ?: 'mysql', (int)(getenv('DB_PORT') ?: 3306)) ? 0 : 1);"; then
-            echo "› MySQL is up."
+            echo "MySQL is up."
             break
         fi
         sleep 1
     done
 fi
 
-php artisan config:clear || echo "Warning: config:clear failed"
-php artisan migrate --force || echo "Warning: migrate failed"
+php artisan config:clear || true
+php artisan migrate --force || true
 
-# Cache for production performance (skip on local debug).
 if [ "${APP_ENV:-local}" = "production" ]; then
-    php artisan config:cache || echo "Warning: config:cache failed"
-    php artisan route:cache || echo "Warning: route:cache failed"
-    php artisan view:cache || echo "Warning: view:cache failed"
+    php artisan config:cache || true
+    php artisan route:cache || true
+    php artisan view:cache || true
 fi
 
-chown -R www-data:www-data storage bootstrap/cache vendor || echo "Warning: chown failed"
+chown -R www-data:www-data storage bootstrap/cache vendor || true
 
 echo "Starting supervisord..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+exec "$@"

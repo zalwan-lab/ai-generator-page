@@ -220,13 +220,76 @@ SYS;
         $bundle = $this->context->buildForUser($user);
         $prompt = $this->buildPrompt($input, $bundle['summary']);
 
-        $payload = $this->callLlm($prompt);
-        $content = $this->parseJson($payload);
-        $content = $this->validateShape($content);
+        try {
+            $payload = $this->callLlm($prompt);
+            $content = $this->parseJson($payload);
+            $content = $this->validateShape($content);
+        } catch (\Throwable $e) {
+            Log::warning('LLM generation failed, using fallback content', [
+                'err' => $e->getMessage(),
+                'product' => $input['product_name'] ?? '',
+            ]);
+
+            $content = $this->generateFallback($input);
+        }
 
         $summary = $this->context->summarizePage($input, $content);
 
         return ['content' => $content, 'context_summary' => $summary];
+    }
+
+    /**
+     * Build a generic but functional sales page from raw user input.
+     * Used whenever the LLM is unavailable (401, timeout, not configured, etc.).
+     *
+     * @param  array<string,mixed>  $input
+     * @return array<string,mixed>
+     */
+    private function generateFallback(array $input): array
+    {
+        $productName = (string) ($input['product_name'] ?? 'Produk Kami');
+        $description = (string) ($input['description'] ?? '');
+        $price = (string) ($input['price'] ?? '');
+        $usp = (string) ($input['usp'] ?? '');
+        $targetAudience = (string) ($input['target_audience'] ?? '');
+
+        $rawFeatures = $input['features'] ?? [];
+        $features = is_array($rawFeatures)
+            ? array_values(array_filter(array_map('strval', $rawFeatures)))
+            : array_filter([trim((string) $rawFeatures)]);
+
+        if (empty($features)) {
+            $features = ['Mudah digunakan', 'Hasil terbukti', 'Dukungan penuh'];
+        }
+
+        // Derive benefits from features — keep them outcome-oriented.
+        $benefits = array_map(
+            fn (string $f) => "Dapatkan manfaat maksimal dari: {$f}",
+            array_slice($features, 0, 5),
+        );
+
+        $descriptionLine = $description !== ''
+            ? $description
+            : "Solusi terbaik untuk kebutuhan Anda dengan {$productName}.";
+
+        $uspLine = $usp !== '' ? $usp : "Kualitas terjamin dengan hasil yang nyata.";
+
+        $audienceLine = $targetAudience !== '' ? " untuk {$targetAudience}" : '';
+
+        return $this->validateShape([
+            'headline' => "Tingkatkan Hasil Anda dengan {$productName}",
+            'subheadline' => "{$uspLine} Solusi tepat{$audienceLine}.",
+            'description' => $descriptionLine,
+            'benefits' => $benefits,
+            'features' => $features,
+            'social_proof' => 'Bergabunglah dengan ribuan pengguna yang telah merasakan manfaatnya.',
+            'price' => $price !== '' ? $price : 'Hubungi kami untuk informasi harga',
+            'call_to_action' => "Mulai Sekarang dengan {$productName}",
+            'theme' => [
+                'palette' => 'violet',
+                'mood' => 'bold',
+            ],
+        ]);
     }
 
     private function buildPrompt(array $input, string $contextSummary): array
